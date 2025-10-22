@@ -1,6 +1,9 @@
+# Ignore Python virtual environment
 Backend/venv/
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
+
+# VS Code settings
 .vscode/

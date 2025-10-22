@@ -1,16 +1,22 @@
-<!DOCTYPE html>
-<html lang="en">
+<!doctype html>
+<html>
 <head>
-  <meta charset="UTF-8">
-  <title>AI Face Recognition</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="utf-8" />
+  <title>Face Detection App</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    video { width: 480px; height: 360px; background: #000; }
+    #log { margin-top: 10px; white-space: pre-wrap; background:#f4f4f4;padding:10px;border-radius:6px; }
+  </style>
 </head>
 <body>
-  <h1>AI Face Recognition</h1>
-  <video id="video" autoplay></video><br>
-  <button onclick="registerFace()">Register Face</button>
-  <button onclick="detectFace()">Detect Face</button>
-  <p id="status"></p>
+  <h1>Face Detection App</h1>
+  <video id="video" autoplay muted></video>
+  <div>
+    <button id="registerBtn">Register Face</button>
+    <button id="detectBtn">Detect Face</button>
+  </div>
+  <div id="log">Logs will appear here...</div>
 
   <script src="script.js"></script>
 </body>

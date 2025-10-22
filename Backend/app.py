@@ -1,66 +1,54 @@
 from flask import Flask, request, jsonify
-from flask_cors import CORS
-import face_recognition
-import numpy as np
-import cv2
+from PIL import Image
+from io import BytesIO
 import base64
+import numpy as np
 
 app = Flask(__name__)
-CORS(app)  # allow frontend from another domain to access backend
 
-registered_encoding = None
+# Try to import face_recognition; if unavailable, use stub functions
+try:
+    import face_recognition
+    FACE_LIB_AVAILABLE = True
+except Exception as e:
+    print("face_recognition not available locally:", e)
+    FACE_LIB_AVAILABLE = False
 
-@app.route('/')
-def home():
-    return jsonify({"message": "Backend Running!"})
+def load_image_from_base64(data_url):
+    # data_url expected 'data:image/jpeg;base64,...'
+    if "," in data_url:
+        _, b64 = data_url.split(",", 1)
+    else:
+        b64 = data_url
+    img_bytes = base64.b64decode(b64)
+    img = Image.open(BytesIO(img_bytes)).convert("RGB")
+    return np.array(img)
 
-@app.route('/register', methods=['POST'])
+@app.route("/register_face", methods=["POST"])
 def register_face():
-    global registered_encoding
-    data = request.get_json()
-    image_data = data['image']
-    image_bytes = base64.b64decode(image_data.split(',')[1])
-    np_arr = np.frombuffer(image_bytes, np.uint8)
-    img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
-
+    if not FACE_LIB_AVAILABLE:
+        return jsonify({"status": "error", "message": "face_recognition not available locally"}), 501
+    data = request.json
+    image_b64 = data.get("image")
+    img = load_image_from_base64(image_b64)
     encodings = face_recognition.face_encodings(img)
-    if len(encodings) == 1:
-        registered_encoding = encodings[0]
-        return jsonify({"message": "✅ Face registered successfully!"})
-    else:
-        return jsonify({"error": "⚠️ Ensure only ONE face is visible."}), 400
+    if encodings:
+        return jsonify({"status": "success", "encoding": encodings[0].tolist()})
+    return jsonify({"status": "fail", "message": "No face found"}), 400
 
-@app.route('/detect', methods=['POST'])
+@app.route("/detect_face", methods=["POST"])
 def detect_face():
-    global registered_encoding
-    if registered_encoding is None:
-        return jsonify({"error": "⚠️ Please register your face first."}), 400
+    if not FACE_LIB_AVAILABLE:
+        return jsonify({"status": "error", "message": "face_recognition not available locally"}), 501
+    data = request.json
+    image_b64 = data.get("image")
+    img = load_image_from_base64(image_b64)
+    locations = face_recognition.face_locations(img)
+    return jsonify({"face_count": len(locations), "locations": locations})
 
-    data = request.get_json()
-    image_data = data['image']
-    image_bytes = base64.b64decode(image_data.split(',')[1])
-    np_arr = np.frombuffer(image_bytes, np.uint8)
-    img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+@app.route("/health", methods=["GET"])
+def health():
+    return jsonify({"status":"ok", "face_recognition_installed": FACE_LIB_AVAILABLE})
 
-    encodings = face_recognition.face_encodings(img)
-    response = {"faces_detected": len(encodings), "confidence": 0, "status": "No Face"}
-
-    if len(encodings) == 0:
-        response["status"] = "No Face Detected"
-    elif len(encodings) > 1:
-        response["status"] = "Multiple Faces Detected"
-        response["confidence"] = 40
-    else:
-        distance = face_recognition.face_distance([registered_encoding], encodings[0])[0]
-        confidence = max(0, 100 - distance * 120)
-        if distance < 0.45:
-            response["status"] = "Authorized Face ✅"
-            response["confidence"] = confidence
-        else:
-            response["status"] = "Unauthorized Face ❌"
-            response["confidence"] = 30
-
-    return jsonify(response)
-
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
