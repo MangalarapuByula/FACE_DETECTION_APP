@@ -1,8 +1,9 @@
-fastapi
-uvicorn
-opencv-python
-facenet-pytorch
-torch
-jinja2
-python-multipart
-aiofiles
+    fastapi
+    uvicorn
+    mediapipe
+    opencv-python
+    facenet-pytorch
+    torch
+    jinja2
+    python-multipart
+    aiofiles
